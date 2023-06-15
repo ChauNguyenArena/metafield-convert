@@ -2,7 +2,6 @@ import PropTypes from 'prop-types'
 import { DropZone, Stack, Thumbnail, Caption } from '@shopify/polaris'
 import { NoteMinor } from '@shopify/polaris-icons'
 import { useState, useCallback, useEffect } from 'react'
-import XLSX from 'xlsx'
 
 MyDropZoneSingle.propTypes = {
   file: PropTypes.object,

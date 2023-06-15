@@ -1,10 +1,11 @@
-import apiCaller from '../helpers/apiCaller'
+import apiCaller from '../helpers/apiCaller.js'
 
 const createProductMetafield = async ({ shop, accessToken, data, id }) => {
+  console.log('data in middle:>>', data)
   return await apiCaller({
     shop,
     accessToken,
-    endpoint: `/admin/api/2023-04/products/${id}/metafields.json`,
+    endpoint: `products/${id}/metafields.json`,
     method: 'POST',
     data,
   })
