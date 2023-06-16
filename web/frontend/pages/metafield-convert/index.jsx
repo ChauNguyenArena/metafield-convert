@@ -52,48 +52,55 @@ function IndexPage(props) {
     return nameColumn.match(/\w+/g)
   }
 
-  const handleConvertMetafield = async (data) => {
+  const generateIdFromHandle = async (arrHandle) => {
+    let res = null
+    let _arr = arrHandle
+      .replaceAll('-', '_')
+      .match(/\w+/g)
+      .map((item) => item.replaceAll('_', '-'))
+
+    res = await ProductApi.find(`?handle=${_arr.toString()}`)
+
+    return !res ? [] : res.data.products.map((_item) => _item['admin_graphql_api_id'])
+  }
+
+  // console.log(
+  //   'test:>>',
+  //   generateIdFromHandle(
+  //     'white-egyptian-cotton-broadcloth-shirt|garnet-red-tie|silk-satin-white-pocket-square'
+  //   )
+  // )
+
+  const handleConvertMetafield = async ({ data }) => {
     let res = null,
-      _data = {}
+      _data = {},
+      counter = 0
+
     for (let item of data) {
-      let _product = { product: { title: item.handle.replaceAll('-', ' ') } }
+      let _product = { product: { title: item.handle } }
       res = await ProductApi.create(_product)
 
       if (res.success) {
+        console.log('row:>>', counter)
         for (let elm of requestMetafield) {
-          if (item[elm.column] !== null) {
+          if (item[elm.column]) {
             let _value = generateNameColumn(elm.column)
             _data['namespace'] = _value[0]
             _data['key'] = _value[1]
             _data['type'] = _value[2]
             _data['value'] = item[elm.column]
-            console.log('_data', _data)
+            // console.log('_data', _data)
             let _res = await MetafieldApi.createProductMetafield(
               { metafield: _data },
               res.data.product.id
             )
 
             console.log(elm.column, ':>>', _res)
-
-            let _val = generateNameColumn(elm.metefield)
-            _data['namespace'] = _val[0]
-            _data['key'] = _val[1]
-            _data['type'] = _val[2]
-            _data['value'] =
-              _val[2] === 'product_reference'
-                ? res.data.product.admin_graphql_api_id
-                : item[elm.column]
-
-            let _r = await MetafieldApi.createProductMetafield(
-              { metafield: _data },
-              res.data.product.id
-            )
-            // console.log('data', res.data)
-            console.log(elm.metefield, ':>>', _r)
           }
         }
-        setCompletedProduct(completedProduct + 1)
-        let _percent = (completedProduct / data.length) * 100
+        counter++
+        setCompletedProduct(counter)
+        let _percent = (counter / data.length) * 100
         setPercentCompleted(_percent)
         // return
       }
@@ -114,7 +121,7 @@ function IndexPage(props) {
           primary
           onClick={() => {
             setLoading(true)
-            handleConvertMetafield(workbook)
+            handleConvertMetafield({ data: workbook })
           }}
           disabled={!workbook}
         >
@@ -136,7 +143,9 @@ function IndexPage(props) {
           secondaryActions={[
             {
               content: 'Cancel',
-              onAction: () => setLoading(false),
+              onAction: () => {
+                setLoading(false)
+              },
               destructive: true,
             },
           ]}

@@ -85,10 +85,15 @@ const count = async ({ shop, accessToken }) => {
   return await apiCaller({ shop, accessToken, endpoint: `products/count.json` })
 }
 
-const find = async ({ shop, accessToken, limit, pageInfo, order, filter }) => {
+const find = async ({ shop, accessToken, limit, pageInfo, handle, order, filter }) => {
   let _limit = limit ? parseInt(limit) : 20
 
   let endpoint = `products.json?limit=${_limit}${filter || ''}`
+
+  if (handle) {
+    endpoint += `&handle=${handle}`
+  }
+
   if (pageInfo) {
     endpoint += `&page_info=${pageInfo}`
   } else {
