@@ -75,39 +75,57 @@ function IndexPage(props) {
     let res = null,
       _data = {},
       counter = 0
-
+    console.time()
     for (let item of data) {
       let _product = { product: { title: item.handle } }
       res = await ProductApi.create(_product)
 
       if (res.success) {
-        console.log('row:>>', counter)
-        for (let elm of requestMetafield) {
-          if (item[elm.column]) {
-            let _value = generateNameColumn(elm.column)
-            _data['namespace'] = _value[0]
-            _data['key'] = _value[1]
-            _data['type'] = _value[2]
-            _data['value'] = item[elm.column]
-            // console.log('_data', _data)
-            let _res = await MetafieldApi.createProductMetafield(
-              { metafield: _data },
-              res.data.product.id
-            )
+        console.log('row:>>', counter + 1)
+        // for (let elm of requestMetafield) {
+        //   if (item[elm.column]) {
+        //     let _value = generateNameColumn(elm.column)
+        //     _data['namespace'] = _value[0]
+        //     _data['key'] = _value[1]
+        //     _data['type'] = _value[2]
+        //     _data['value'] = item[elm.column]
+        //     // console.log('_data', _data)
+        //     let _res = await MetafieldApi.createProductMetafield(
+        //       { metafield: _data },
+        //       res.data.product.id
+        //     )
 
-            console.log(elm.column, ':>>', _res)
-          }
-        }
+        //     console.log(elm.column, ':>>', _res)
+        //   }
+        // }
+        await Promise.all(
+          requestMetafield.map(async (elm) => {
+            if (item[elm.column]) {
+              const _data = {
+                namespace: generateNameColumn(elm.column)[0],
+                key: generateNameColumn(elm.column)[1],
+                type: generateNameColumn(elm.column)[2],
+                value: item[elm.column],
+              }
+              const _res = await MetafieldApi.createProductMetafield(
+                { metafield: _data },
+                res.data.product.id
+              )
+              console.log(elm.column, ':>>', _res)
+            }
+          })
+        )
         counter++
-        setCompletedProduct(counter)
-        let _percent = (counter / data.length) * 100
-        setPercentCompleted(_percent)
+        // setCompletedProduct(counter)
+        // let _percent = (counter / data.length) * 100
+        // setPercentCompleted(_percent)
         // return
       }
     }
+    console.timeEnd()
   }
 
-  console.log('workbook:>>', workbook)
+  // console.log('workbook:>>', workbook)
 
   // console.log('keys workbook:>>', generateNameColumn('c_f["fabric_details"]["string"]'))
 
