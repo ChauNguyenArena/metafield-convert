@@ -2,10 +2,8 @@ import React, { useState } from 'react'
 import PropTypes from 'prop-types'
 import { read, utils } from 'xlsx'
 import MyDropZoneSingle from '../../components/MyDropZoneSingle'
-import { Button, LegacyStack, ProgressBar, Text } from '@shopify/polaris'
+import { Button, LegacyStack, Modal, ProgressBar, Spinner, Text } from '@shopify/polaris'
 import AppHeader from '../../components/AppHeader'
-import ConfirmModal from '../../components/ConfirmModal'
-import ProductApi from '../../apis/product'
 import MetafieldApi from '../../apis/metafield'
 
 let requestMetafield = [
@@ -21,11 +19,7 @@ let requestMetafield = [
 function IndexPage(props) {
   const [workbook, setWorkbook] = useState(null)
   const [loading, setLoading] = useState(false)
-  const [completedProduct, setCompletedProduct] = useState(0)
-  const [percentCompleted, setPercentCompleted] = useState(0)
-  // const handleChange = async (e) => {
-  //   console.log('file', e.target)
-  // }
+
   const getWorkbook = async (file) => {
     try {
       const f = await file.arrayBuffer()
@@ -48,86 +42,26 @@ function IndexPage(props) {
     }
   }
 
-  const generateNameColumn = (nameColumn) => {
-    return nameColumn.match(/\w+/g)
-  }
-
-  const generateIdFromHandle = async (arrHandle) => {
-    let res = null
-    let _arr = arrHandle
-      .replaceAll('-', '_')
-      .match(/\w+/g)
-      .map((item) => item.replaceAll('_', '-'))
-
-    res = await ProductApi.find(`?handle=${_arr.toString()}`)
-
-    return !res ? [] : res.data.products.map((_item) => _item['admin_graphql_api_id'])
-  }
-
-  // console.log(
-  //   'test:>>',
-  //   generateIdFromHandle(
-  //     'white-egyptian-cotton-broadcloth-shirt|garnet-red-tie|silk-satin-white-pocket-square'
-  //   )
-  // )
-
   const handleConvertMetafield = async ({ data }) => {
-    let res = null,
-      _data = {},
-      counter = 0
+    let res = null
     console.time()
-    for (let item of data) {
-      let _product = { product: { title: item.handle } }
-      res = await ProductApi.create(_product)
+    res = await MetafieldApi.importMetafields(data)
 
-      if (res.success) {
-        console.log('row:>>', counter + 1)
-        // for (let elm of requestMetafield) {
-        //   if (item[elm.column]) {
-        //     let _value = generateNameColumn(elm.column)
-        //     _data['namespace'] = _value[0]
-        //     _data['key'] = _value[1]
-        //     _data['type'] = _value[2]
-        //     _data['value'] = item[elm.column]
-        //     // console.log('_data', _data)
-        //     let _res = await MetafieldApi.createProductMetafield(
-        //       { metafield: _data },
-        //       res.data.product.id
-        //     )
-
-        //     console.log(elm.column, ':>>', _res)
-        //   }
-        // }
-        await Promise.all(
-          requestMetafield.map(async (elm) => {
-            if (item[elm.column]) {
-              const _data = {
-                namespace: generateNameColumn(elm.column)[0],
-                key: generateNameColumn(elm.column)[1],
-                type: generateNameColumn(elm.column)[2],
-                value: item[elm.column],
-              }
-              const _res = await MetafieldApi.createProductMetafield(
-                { metafield: _data },
-                res.data.product.id
-              )
-              console.log(elm.column, ':>>', _res)
-            }
-          })
-        )
-        counter++
-        // setCompletedProduct(counter)
-        // let _percent = (counter / data.length) * 100
-        // setPercentCompleted(_percent)
-        // return
-      }
-    }
+    console.log('res:>>', res)
     console.timeEnd()
+    setLoading(false)
   }
 
-  // console.log('workbook:>>', workbook)
+  const handleCopyMetafields = async ({ data }) => {
+    console.time()
+    const res = await MetafieldApi.copyMetafields(data)
 
-  // console.log('keys workbook:>>', generateNameColumn('c_f["fabric_details"]["string"]'))
+    console.log('res:>>', res)
+    console.timeEnd()
+    setLoading(false)
+  }
+
+  // console.log('generate:>>', generateIdFromHandle())
 
   return (
     <LegacyStack vertical alignment="fill">
@@ -135,6 +69,15 @@ function IndexPage(props) {
 
       <MyDropZoneSingle onChange={(value) => (value ? getWorkbook(value) : null)} />
       <LegacyStack distribution="trailing">
+        <Button
+          onClick={() => {
+            setLoading(true)
+            handleCopyMetafields({ data: workbook })
+          }}
+          disabled={!workbook}
+        >
+          Copy metafields
+        </Button>
         <Button
           primary
           onClick={() => {
@@ -147,27 +90,26 @@ function IndexPage(props) {
         </Button>
       </LegacyStack>
       {loading && (
-        <ConfirmModal
-          title="Metafield Convert"
-          content={
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-              <ProgressBar progress={percentCompleted} size="small" color="success" />
-              <Text variant="bodyLg" as="p" alignment="center">
-                Created {completedProduct} products out of {workbook.length}
-              </Text>
-            </div>
-          }
-          onClose={() => setLoading(!loading)}
-          secondaryActions={[
-            {
-              content: 'Cancel',
-              onAction: () => {
-                setLoading(false)
+        <div style={{ maxWidth: '100px' }}>
+          <Modal
+            open={true}
+            onClose={() => setLoading(!loading)}
+            title="Loading..."
+            secondaryActions={[
+              {
+                content: 'Cancel',
+                onAction: () => {
+                  setLoading(false)
+                },
+                destructive: true,
               },
-              destructive: true,
-            },
-          ]}
-        />
+            ]}
+          >
+            <Modal.Section>
+              <Spinner accessibilityLabel="Spinner example" size="large" />
+            </Modal.Section>
+          </Modal>
+        </div>
       )}
     </LegacyStack>
   )

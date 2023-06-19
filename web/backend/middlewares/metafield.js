@@ -1,7 +1,19 @@
 import apiCaller from '../helpers/apiCaller.js'
+import { generateIdFromHandle, generateNameColumn } from '../helpers/generateMetafield.js'
+import Product from './product.js'
+
+let requestMetafield = [
+  {
+    column: 'c_f["recommended"]["string"]',
+    metafield: 'custom["complete_the_look"]["list.product_reference"]',
+  },
+  {
+    column: 'c_f["fabric_details"]["string"]',
+    metafield: 'custom["fabric_care"]["multi_line_text_field"]',
+  },
+]
 
 const createProductMetafield = async ({ shop, accessToken, data, id }) => {
-  console.log('data in middle:>>', data)
   return await apiCaller({
     shop,
     accessToken,
@@ -11,8 +23,123 @@ const createProductMetafield = async ({ shop, accessToken, data, id }) => {
   })
 }
 
+const importMetafieldFromExcel = async ({ shop, accessToken, data }) => {
+  let _success = 0,
+    _productFail = 0
+
+  for (let item of data) {
+    let _product = { product: { title: item.handle } }
+    //create Product with handle
+    const res = await Product.create({ shop, accessToken, data: _product })
+
+    if (res.product) {
+      //create metafield
+      await Promise.all(
+        requestMetafield.map(async (elm) => {
+          if (item[elm.column]) {
+            const _data = {
+              metafield: {
+                namespace: generateNameColumn(elm.column)[0],
+                key: generateNameColumn(elm.column)[1],
+                type: generateNameColumn(elm.column)[2],
+                value: item[elm.column],
+              },
+            }
+
+            let _res = await createProductMetafield({
+              shop,
+              accessToken,
+              data: _data,
+              id: res.product.id,
+            })
+          }
+        })
+      )
+
+      _success++
+    } else {
+      _productFail++
+    }
+  }
+
+  return { product_success: _success, product_fail: _productFail, total: _success + _productFail }
+}
+
+const copyMetafield = async ({ shop, accessToken, data }) => {
+  let _success = 0,
+    _productFail = 0
+
+  for (let item of data) {
+    const res = await Product.find({ shop, accessToken, handle: item.handle })
+
+    if (res.products) {
+      let _id = res.products[0].id
+
+      await Promise.all(
+        requestMetafield.map(async (elm) => {
+          if (item[elm.column]) {
+            if (generateNameColumn(elm.metafield)[2] === 'multi_line_text_field') {
+              const _data = {
+                metafield: {
+                  namespace: generateNameColumn(elm.metafield)[0],
+                  key: generateNameColumn(elm.metafield)[1],
+                  type: generateNameColumn(elm.metafield)[2],
+                  value: item[elm.column],
+                },
+              }
+
+              let _res = await createProductMetafield({
+                shop,
+                accessToken,
+                data: _data,
+                id: _id,
+              })
+              console.log(`${elm.metafield}:>> ${_res}`)
+            } else {
+              let _value = await Product.find({
+                shop,
+                accessToken,
+                handle: generateIdFromHandle(item[elm.column]),
+              })
+              _value = _value.products.map((_item) => _item['admin_graphql_api_id'])
+              const _data = {
+                metafield: {
+                  namespace: generateNameColumn(elm.metafield)[0],
+                  key: generateNameColumn(elm.metafield)[1],
+                  type: elm.metafield.substring(
+                    elm.metafield.lastIndexOf('[') + 2,
+                    elm.metafield.lastIndexOf(']') - 1
+                  ),
+                  value: JSON.stringify(_value),
+                },
+              }
+
+              let _res = await createProductMetafield({
+                shop,
+                accessToken,
+                data: _data,
+                id: _id,
+              })
+
+              console.log(`${elm.metafield}:>> ${_res}`)
+            }
+          }
+        })
+      )
+
+      _success++
+    } else {
+      _productFail++
+    }
+  }
+
+  return { product_success: _success, product_fail: _productFail, total: _success + _productFail }
+}
+
 const Metafield = {
   createProductMetafield,
+  importMetafieldFromExcel,
+  copyMetafield,
 }
 
 export default Metafield
