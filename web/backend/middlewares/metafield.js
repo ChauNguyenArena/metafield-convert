@@ -52,11 +52,14 @@ const importMetafieldFromExcel = async ({ shop, accessToken, data }) => {
               data: _data,
               id: res.product.id,
             })
+
+            console.log('_res:>>', _res)
           }
         })
       )
 
       _success++
+      console.log('_success:>>', _success)
     } else {
       _productFail++
     }
@@ -136,10 +139,62 @@ const copyMetafield = async ({ shop, accessToken, data }) => {
   return { product_success: _success, product_fail: _productFail, total: _success + _productFail }
 }
 
+const getMetafieldByProduct = async ({ shop, accessToken, idProduct }) => {
+  return await apiCaller({
+    shop,
+    accessToken,
+    endpoint: `products/${idProduct}/metafields.json`,
+    method: 'GET',
+  })
+}
+
+const copyMetafields = async ({ shop, accessToken, data }) => {
+  let items = []
+  let res = null
+  let hasNextPage = true
+  let nextPageInfo = ''
+  let count = 0
+  try {
+    while (hasNextPage) {
+      res = await apiCaller({
+        shop,
+        accessToken,
+        endpoint: `products.json?limit=250&page_info=${nextPageInfo}`,
+        pageInfo: true,
+      })
+      // return{
+      if (!res.products) {
+        throw res.message
+      }
+      items = res.products
+
+      for (let item of items) {
+        count++
+        console.log('count:>>', count)
+        const _res = await getMetafieldByProduct({ shop, accessToken, idProduct: item.id })
+        if (!_res.metafields) {
+          throw _res.message
+        }
+        if (_res.metafields.length > 0) console.log('_res:>>', _res)
+      }
+
+      hasNextPage = res.pageInfo.hasNext
+      nextPageInfo = res.pageInfo.nextPageInfo
+    }
+  } catch (error) {
+    console.log('error:>>', error)
+    return error
+  }
+
+  return
+}
+
 const Metafield = {
   createProductMetafield,
+  getMetafieldByProduct,
   importMetafieldFromExcel,
   copyMetafield,
+  copyMetafields,
 }
 
 export default Metafield

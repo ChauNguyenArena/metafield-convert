@@ -40,4 +40,16 @@ export default {
       return ResponseHandler.error(res, error)
     }
   },
+
+  copyMetafields: async (req, res) => {
+    try {
+      const { shop, accessToken } = getCurrentSession(req, res)
+
+      const data = await Metafield.copyMetafields({ shop, accessToken, data: req.body })
+
+      return ResponseHandler.success(res, data)
+    } catch (error) {
+      return ResponseHandler.error(res, error)
+    }
+  },
 }

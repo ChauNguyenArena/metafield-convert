@@ -42,6 +42,7 @@ webhookRoute(app)
 // also add a proxy rule for them in web/frontend/vite.config.js
 
 app.use('/api/*', shopify.validateAuthenticatedSession(), verifyToken)
+// app.use("/api/*", shopify.verifyToken());
 
 app.use(cors())
 app.use(morgan('tiny'))

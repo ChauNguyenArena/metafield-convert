@@ -61,6 +61,20 @@ function IndexPage(props) {
     setLoading(false)
   }
 
+  const handleCopiesMetafields = async ({ data }) => {
+    console.time()
+    try {
+      const res = await MetafieldApi.copiesMetafields(data)
+      if (!res.success) throw res.error
+      console.log('res:>>', res)
+    } catch (error) {
+      console.log('error:>>', error)
+    }
+
+    console.timeEnd()
+    setLoading(false)
+  }
+
   // console.log('generate:>>', generateIdFromHandle())
 
   return (
@@ -69,6 +83,15 @@ function IndexPage(props) {
 
       <MyDropZoneSingle onChange={(value) => (value ? getWorkbook(value) : null)} />
       <LegacyStack distribution="trailing">
+        <Button
+          onClick={() => {
+            setLoading(true)
+            handleCopiesMetafields({ data: workbook })
+          }}
+          disabled={!workbook}
+        >
+          Copies metafields
+        </Button>
         <Button
           onClick={() => {
             setLoading(true)
