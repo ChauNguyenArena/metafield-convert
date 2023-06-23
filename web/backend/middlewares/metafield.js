@@ -148,53 +148,11 @@ const getMetafieldByProduct = async ({ shop, accessToken, idProduct }) => {
   })
 }
 
-const copyMetafields = async ({ shop, accessToken, data }) => {
-  let items = []
-  let res = null
-  let hasNextPage = true
-  let nextPageInfo = ''
-  let count = 0
-  try {
-    while (hasNextPage) {
-      res = await apiCaller({
-        shop,
-        accessToken,
-        endpoint: `products.json?limit=250&page_info=${nextPageInfo}`,
-        pageInfo: true,
-      })
-      // return{
-      if (!res.products) {
-        throw res.message
-      }
-      items = res.products
-
-      for (let item of items) {
-        count++
-        console.log('count:>>', count)
-        const _res = await getMetafieldByProduct({ shop, accessToken, idProduct: item.id })
-        if (!_res.metafields) {
-          throw _res.message
-        }
-        if (_res.metafields.length > 0) console.log('_res:>>', _res)
-      }
-
-      hasNextPage = res.pageInfo.hasNext
-      nextPageInfo = res.pageInfo.nextPageInfo
-    }
-  } catch (error) {
-    console.log('error:>>', error)
-    return error
-  }
-
-  return
-}
-
 const Metafield = {
   createProductMetafield,
   getMetafieldByProduct,
   importMetafieldFromExcel,
   copyMetafield,
-  copyMetafields,
 }
 
 export default Metafield

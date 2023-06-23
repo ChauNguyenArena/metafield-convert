@@ -5,6 +5,7 @@ import MyDropZoneSingle from '../../components/MyDropZoneSingle'
 import { Button, LegacyStack, Modal, ProgressBar, Spinner, Text } from '@shopify/polaris'
 import AppHeader from '../../components/AppHeader'
 import MetafieldApi from '../../apis/metafield'
+import ProductApi from '../../apis/product'
 
 let requestMetafield = [
   {
@@ -54,23 +55,14 @@ function IndexPage(props) {
 
   const handleCopyMetafields = async ({ data }) => {
     console.time()
-    const res = await MetafieldApi.copyMetafields(data)
+    let res = null
+
+    res = await ProductApi.count()
+
+    let _count = res.data.count
+    res = await MetafieldApi.copyMetafields({ count: _count })
 
     console.log('res:>>', res)
-    console.timeEnd()
-    setLoading(false)
-  }
-
-  const handleCopiesMetafields = async ({ data }) => {
-    console.time()
-    try {
-      const res = await MetafieldApi.copiesMetafields(data)
-      if (!res.success) throw res.error
-      console.log('res:>>', res)
-    } catch (error) {
-      console.log('error:>>', error)
-    }
-
     console.timeEnd()
     setLoading(false)
   }
@@ -83,15 +75,6 @@ function IndexPage(props) {
 
       <MyDropZoneSingle onChange={(value) => (value ? getWorkbook(value) : null)} />
       <LegacyStack distribution="trailing">
-        <Button
-          onClick={() => {
-            setLoading(true)
-            handleCopiesMetafields({ data: workbook })
-          }}
-          disabled={!workbook}
-        >
-          Copies metafields
-        </Button>
         <Button
           onClick={() => {
             setLoading(true)
