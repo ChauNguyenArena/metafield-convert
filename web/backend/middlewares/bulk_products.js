@@ -170,9 +170,12 @@ const updateWithMetafields = async (data, backgroundJobId) => {
           await Promise.all(
             res.metafields.map(async (metafield) => {
               if (
-                requestMetafield[0].column.includes(metafield.namespace) &&
-                requestMetafield[0].column.includes(metafield.key) &&
-                requestMetafield[0].column.includes(metafield.type)
+                metafield.namespace === 'c_f' &&
+                metafield.key === 'recommended' &&
+                metafield.type === 'string'
+                // requestMetafield[0].column.includes(metafield.namespace) &&
+                // requestMetafield[0].column.includes(metafield.key) &&
+                // requestMetafield[0].column.includes(metafield.type)
               ) {
                 let _value = await Product.find({
                   shop,
@@ -182,25 +185,34 @@ const updateWithMetafields = async (data, backgroundJobId) => {
                 _value = _value.products.map((_item) => _item['admin_graphql_api_id'])
 
                 _data.push({
-                  namespace: generateNameColumn(requestMetafield[0].metafield)[0],
-                  key: generateNameColumn(requestMetafield[0].metafield)[1],
-                  type: requestMetafield[0].metafield.substring(
-                    requestMetafield[0].metafield.lastIndexOf('[') + 2,
-                    requestMetafield[0].metafield.lastIndexOf(']') - 1
-                  ),
+                  namespace: 'custom',
+                  key: 'fabric_care',
+                  type: 'list.product_reference',
+                  // namespace: generateNameColumn(requestMetafield[0].metafield)[0],
+                  // key: generateNameColumn(requestMetafield[0].metafield)[1],
+                  // type: requestMetafield[0].metafield.substring(
+                  //   requestMetafield[0].metafield.lastIndexOf('[') + 2,
+                  //   requestMetafield[0].metafield.lastIndexOf(']') - 1
+                  // ),
                   value: JSON.stringify(_value),
                 })
               }
 
               if (
-                requestMetafield[1].column.includes(metafield.namespace) &&
-                requestMetafield[1].column.includes(metafield.key) &&
-                requestMetafield[1].column.includes(metafield.type)
+                metafield.namespace === 'c_f' &&
+                metafield.key === 'fabric_details' &&
+                metafield.type === 'string'
+                // requestMetafield[1].column.includes(metafield.namespace) &&
+                // requestMetafield[1].column.includes(metafield.key) &&
+                // requestMetafield[1].column.includes(metafield.type)
               ) {
                 _data.push({
-                  namespace: generateNameColumn(requestMetafield[1].metafield)[0],
-                  key: generateNameColumn(requestMetafield[1].metafield)[1],
-                  type: generateNameColumn(requestMetafield[1].metafield)[2],
+                  namespace: 'custom',
+                  key: 'complete_the_look',
+                  type: 'multi_line_text_field',
+                  // namespace: generateNameColumn(requestMetafield[1].metafield)[0],
+                  // key: generateNameColumn(requestMetafield[1].metafield)[1],
+                  // type: generateNameColumn(requestMetafield[1].metafield)[2],
                   value: metafield.value,
                 })
               }
