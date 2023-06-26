@@ -1,6 +1,7 @@
-import { generateNameColumn } from '../helpers/generateMetafield.js'
+import { generateIdFromHandle, generateNameColumn } from '../helpers/generateMetafield.js'
 import BackgroundJob from './background_job.js'
 import BullmqActions from './bullmq_actions.js'
+import Metafield from './metafield.js'
 import Product from './product.js'
 import StoreSetting from './store_setting.js'
 
@@ -144,9 +145,7 @@ const updateWithMetafields = async (data, backgroundJobId) => {
   try {
     const { shop, products } = data
 
-    console.log('products:>>', products.length)
-
-    return
+    // return
 
     let result = []
 
@@ -155,37 +154,83 @@ const updateWithMetafields = async (data, backgroundJobId) => {
     const { accessToken, plusStore } = storeSetting
 
     // create many products
-    await new Promise((resolve, reject) => {
+    await new Promise(async (resolve, reject) => {
       let count = 0
       let total = products.length
       if (!total) resolve()
       for (let i = 0; i < total; i++) {
-        setTimeout(async () => {
-          await Product.create({
-            shop,
-            accessToken,
-            data: { product: products[i] },
-          })
-            .then((res) => {
-              console.log(`[${i + 1}/${total}] success`)
+        let res = null
+        res = await Metafield.getMetafieldByProduct({
+          shop,
+          accessToken,
+          idProduct: products[i].id,
+        })
+        if (res.metafields.length > 0) {
+          let _data = []
+          await Promise.all(
+            res.metafields.map(async (metafield) => {
+              if (
+                requestMetafield[0].column.includes(metafield.namespace) &&
+                requestMetafield[0].column.includes(metafield.key) &&
+                requestMetafield[0].column.includes(metafield.type)
+              ) {
+                let _value = await Product.find({
+                  shop,
+                  accessToken,
+                  handle: generateIdFromHandle(metafield.value),
+                })
+                _value = _value.products.map((_item) => _item['admin_graphql_api_id'])
 
-              // add to result
-              result.push({ id: res.product.id })
-            })
-            .catch((err) => {
-              console.log(`[${i + 1}/${total}] failed:`, err.message)
-            })
-            .then(() => {
-              count++
-              if (count == total) resolve()
+                _data.push({
+                  namespace: generateNameColumn(requestMetafield[0].metafield)[0],
+                  key: generateNameColumn(requestMetafield[0].metafield)[1],
+                  type: requestMetafield[0].metafield.substring(
+                    requestMetafield[0].metafield.lastIndexOf('[') + 2,
+                    requestMetafield[0].metafield.lastIndexOf(']') - 1
+                  ),
+                  value: JSON.stringify(_value),
+                })
+              }
 
-              // update background job progress
-              let progress = Math.ceil((count / total) * 100)
-              let status =
-                progress == 100 ? BackgroundJob.Status.COMPLETED : BackgroundJob.Status.RUNNING
-              BullmqActions.updateJobProgress(backgroundJobId, { progress, status, result })
+              if (
+                requestMetafield[1].column.includes(metafield.namespace) &&
+                requestMetafield[1].column.includes(metafield.key) &&
+                requestMetafield[1].column.includes(metafield.type)
+              ) {
+                _data.push({
+                  namespace: generateNameColumn(requestMetafield[1].metafield)[0],
+                  key: generateNameColumn(requestMetafield[1].metafield)[1],
+                  type: generateNameColumn(requestMetafield[1].metafield)[2],
+                  value: metafield.value,
+                })
+              }
             })
-        }, i * 500)
+          )
+          if (_data.length > 0) {
+            await Product.update({
+              shop,
+              accessToken,
+              id: products[i].id,
+              data: { product: { metafields: _data } },
+            })
+              .then((res) => {
+                console.log(`[${i + 1}/${total}] success`)
+
+                // add to result
+                result.push({ id: res.product.id })
+              })
+              .catch((err) => {
+                console.log(`[${i + 1}/${total}] failed:`, err.message)
+              })
+          }
+        }
+        count++
+        if (count == total) resolve()
+
+        // update background job progress
+        let progress = Math.ceil((count / total) * 100)
+        let status = progress == 100 ? BackgroundJob.Status.COMPLETED : BackgroundJob.Status.RUNNING
+        BullmqActions.updateJobProgress(backgroundJobId, { progress, status, result })
       }
     })
   } catch (error) {

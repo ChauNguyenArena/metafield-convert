@@ -2,7 +2,7 @@ import React, { useState } from 'react'
 import PropTypes from 'prop-types'
 import { read, utils } from 'xlsx'
 import MyDropZoneSingle from '../../components/MyDropZoneSingle'
-import { Button, LegacyStack, Modal, ProgressBar, Spinner, Text } from '@shopify/polaris'
+import { Button, LegacyStack, Modal, Spinner } from '@shopify/polaris'
 import AppHeader from '../../components/AppHeader'
 import MetafieldApi from '../../apis/metafield'
 import ProductApi from '../../apis/product'
@@ -53,7 +53,7 @@ function IndexPage(props) {
     setLoading(false)
   }
 
-  const handleCopyMetafields = async ({ data }) => {
+  const handleCopyMetafields = async () => {
     console.time()
     let res = null
 
@@ -80,7 +80,6 @@ function IndexPage(props) {
             setLoading(true)
             handleCopyMetafields({ data: workbook })
           }}
-          disabled={!workbook}
         >
           Copy metafields
         </Button>
